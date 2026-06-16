@@ -2,17 +2,23 @@ import { useState } from "react";
 import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { toast } from "sonner";
+import axios from "axios";
+import { BACKEND_URL } from "../lib/config";
 
 export function Form() {
   const [github, setGithub] = useState("");
   const [linkedin, setLinkedin] = useState("");
 
-  function onSubmit() {
+  async function onSubmit() {
     if (!github || !linkedin) {
         //Todo add more validation over here... 
       toast("Please provide valid github and linkedin URL");
       return;
     }
+    await axios.post(`${BACKEND_URL}/api/v1/pre-interview`,{
+        linkedin,
+        github
+    });
   }
 
   return (
