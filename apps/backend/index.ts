@@ -1,6 +1,7 @@
 import express from "express"
 import { preInterviewBody } from "./types";
 import axios from "axios";
+import { scrapeGithub } from "./scrapers/github";
 const app = express();
 
 app.use(express.json);
@@ -17,21 +18,16 @@ app.post("/api/v1/pre-interview", async (req, res)=>{
     
     const githubUsername = githubUrl.split("/").pop();
 
+    if(!githubUsername){
+        return res.status(400).json({
+            message : "Invalid github URL"
+        })
+    }
 
-    // const userRepos = await axios.get(`https://api.github.com/${githubUsername}/repos`);
-    // const filteredUserRepos = userRepos.data.map((x:any)=> ({
-    //     description : x.description,
-    //     name : x.name,
-    //     fullname : x.name,
-    //     starCount : x.stargazers_count
-    // }));
-
-
-    // console.log(filteredUserRepos);
-
-    //First Difficult part scraping the linkedin for user over here ....
 
     const githubData = await scrapeGithub(githubUsername);
+
+    
     console.log(githubData);
     res.json({github : githubData});
 
