@@ -10,3 +10,4 @@ export async function scrapeGithub(username : String){
         startCount : x.stargazers_count
     }));
 }
+
