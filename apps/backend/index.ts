@@ -19,8 +19,20 @@ app.post("/api/v1/pre-interview", async (req, res)=>{
     const githubUsername = githubUrl.split("/").pop();
     const linkedinUsername = linkedinUrl.split("/").pop();
 
-    const userRepo = await axios.get(`https://api.github.com/${githubUsername}/repos`);
+    const userRepos = await axios.get(`https://api.github.com/${githubUsername}/repos`);
+    const filteredUserRepos = userRepos.data.map((x:any)=> ({
+        description : x.description,
+        name : x.name,
+        fullname : x.name,
+        starCount : x.stargazers_count
+    }));
 
+
+    console.log(filteredUserRepos);
+
+    //First Difficult part scraping the linkedin for user over here ....
+
+    
 
 })
 
