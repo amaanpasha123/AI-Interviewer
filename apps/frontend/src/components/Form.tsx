@@ -9,6 +9,7 @@ import { useNavigate } from "react-router";
 export function Form() {
   const [github, setGithub] = useState("");
   const navigate = useNavigate();
+  const [loading, setLoading] = useState(false);
 
   async function onSubmit() {
     if (!github) {
@@ -16,12 +17,14 @@ export function Form() {
       toast("Please provide valid github and linkedin URL");
       return;
     }
+    setLoading(true);
+
     const response =  await axios.post(`${BACKEND_URL}/api/v1/pre-interview`, {
       github,
     });
 
     navigate(`/interview/${response.data.id}`);
-    
+
   }
 
   return (
@@ -37,7 +40,8 @@ export function Form() {
           />
         </div>
         <div className="flex justify-center p-4">
-          <Button onClick={onSubmit}>Start interview</Button>
+          <Button disabled={loading} onClick={onSubmit}>
+            {loading ? "Starting Interview....." : "start interview"}</Button>
         </div>
       </div>
     </div>
