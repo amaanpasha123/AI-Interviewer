@@ -4,20 +4,24 @@ import { Input } from "../components/ui/input";
 import { toast } from "sonner";
 import axios from "axios";
 import { BACKEND_URL } from "../lib/config";
+import { useNavigate } from "react-router";
 
 export function Form() {
   const [github, setGithub] = useState("");
-
+  const navigate = useNavigate();
 
   async function onSubmit() {
     if (!github) {
-        //Todo add more validation over here... 
+      //Todo add more validation over here...
       toast("Please provide valid github and linkedin URL");
       return;
     }
-    await axios.post(`${BACKEND_URL}/api/v1/pre-interview`,{
-        github
+    const response =  await axios.post(`${BACKEND_URL}/api/v1/pre-interview`, {
+      github,
     });
+
+    navigate(`/interview/${response.data.id}`);
+    
   }
 
   return (
@@ -39,5 +43,3 @@ export function Form() {
     </div>
   );
 }
-
-
