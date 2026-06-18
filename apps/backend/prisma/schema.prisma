@@ -1,7 +1,6 @@
-// This is your Prisma schema file,
-// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
-// Get a free hosted Postgres database in seconds: `npx create-db`
+// This is your Prisma schema file
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
 
 generator client {
   provider = "prisma-client"
@@ -10,31 +9,55 @@ generator client {
 
 datasource db {
   provider = "postgresql"
+  // DATABASE_URL is loaded from prisma.config.ts
 }
 
 model Interview {
-  id              String      @id @default(uuid())
-  githubMetadata  Json        
-  status          InterviewStatus
-  score           Int        @default(0)
-  conversation    Message[]
+  id             String           @id @default(uuid())
+  githubMetadata Json
+  status         InterviewStatus
+  score          Int              @default(0)
+
+  // One Interview can have many Messages
+  conversation   Message[]
 }
 
 model Message {
-  id              String       @id @default(uuid())
-  message         String
-  type            ConversationType
-  interviewId     String
-  interview       Interview    @relation(fields : [interviewId], references: [id])
+  id          String      @id @default(uuid())
+
+  // Actual message content
+  message     String
+
+  // ✅ CHANGED:
+  // OLD: ConversationType
+  // NEW: MessageType
+  // Reason: ConversationType enum does not exist.
+  type        MessageType
+
+  // Foreign key
+  interviewId String
+
+  // Relation to Interview
+  interview   Interview   @relation(fields: [interviewId], references: [id])
 }
 
+// ✅ CHANGED:
+// OLD ENUM NAME USED IN MODEL: ConversationType
+// ACTUAL ENUM DEFINED: MessageType
+//
+// We keep MessageType and use it in the Message model.
 enum MessageType {
   User
-  Assitant
+
+  // ✅ CHANGED:
+  // OLD: Assitant
+  // NEW: Assistant
+  // Reason: Typo correction.
+  Assistant
 }
 
 enum InterviewStatus {
-  Pre 
+  Pre
   InProgress
   Done
 }
