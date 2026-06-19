@@ -27,7 +27,7 @@ export function Interview() {
       // Start the session using the Session Description Protocol (SDP)
       const offer = await pc.createOffer();
       await pc.setLocalDescription(offer);
-
+      console.log("hi");
       const sdpResponse = await fetch("api/v1/session", {
         method: "POST",
         body: offer.sdp,
@@ -35,7 +35,7 @@ export function Interview() {
           "Content-Type": "application/sdp",
         },
       });
-
+      console.log("hello");
       const answer = {
         type: "answer" as "answer",
         sdp: await sdpResponse.text(),
