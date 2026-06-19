@@ -48,31 +48,56 @@ app.post("/api/v1/pre-interview", async (req, res) => {
 //OPEN AI API is working over here in this.......
 
 app.post("/api/v1/session", async (req, res) => {
-  const sessionConfig = JSON.stringify({
-    type: "realtime",
-    model: "gpt-realtime-2",
-    audio: { output: { voice: "marin" } },
-  });
-
-  const fd = new FormData();
-  fd.set("sdp", req.body);
-  fd.set("session", sessionConfig);
-
   try {
-    const r = await fetch("https://api.openai.com/v1/realtime/calls", {
+    // Step 1: Create ephemeral session + client secret
+    const secretRes = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
       method: "POST",
       headers: {
-        Authorization: `Bearer ${process.env.OPENAI_API_KEY}`,
-        "OpenAI-Safety-Identifier": "hashed-user-id",
+        Authorization: `Bearer ${process.env.OPENAI_KEY}`,
+        "Content-Type": "application/json",
       },
-      body: fd,
+      body: JSON.stringify({
+        session: {
+          type: "realtime",
+          model: "gpt-realtime",
+          audio: {
+            output: { voice: "alloy" },
+          },
+        },
+      }),
     });
-    // Send back the SDP we received from the OpenAI REST API
-    const sdp = await r.text();
-    res.send(sdp);
+
+    if (!secretRes.ok) {
+      const detail = await secretRes.text();
+      console.error("client_secrets error:", detail);
+      return res.status(500).json({ error: "Failed to create client secret", detail });
+    }
+
+    const secretData = await secretRes.json();
+    const ephemeralKey = secretData.value; // ephemeral token
+
+    // Step 2: Exchange SDP using the ephemeral key
+    const callRes = await fetch("https://api.openai.com/v1/realtime/calls", {
+      method: "POST",
+      headers: {
+        Authorization: `Bearer ${ephemeralKey}`,
+        "Content-Type": "application/sdp",
+      },
+      body: req.body, // raw SDP offer
+    });
+
+    const answerSdp = await callRes.text();
+
+    if (!callRes.ok) {
+      console.error("calls error:", answerSdp);
+      return res.status(500).json({ error: "Failed SDP exchange", detail: answerSdp });
+    }
+
+    res.setHeader("Content-Type", "application/sdp");
+    res.send(answerSdp);
   } catch (error) {
-    console.error("Token generation error:", error);
-    res.status(500).json({ error: "Failed to generate token" });
+    console.error("Session error:", error);
+    res.status(500).json({ error: "Failed to create session" });
   }
 });
 
