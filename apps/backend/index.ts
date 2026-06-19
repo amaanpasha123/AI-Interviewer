@@ -38,13 +38,15 @@ app.post("/api/v1/pre-interview", async (req, res)=>{
 
         }
     })
-
     
-
     res.json({id : interview.id});
 
 
 })
+
+app.post("/api/v1/session", async(req, res)=>{
+    
+});
 
 app.listen(3001, ()=>{
     console.log("server is running");
