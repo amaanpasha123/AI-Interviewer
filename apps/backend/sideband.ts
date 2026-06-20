@@ -18,13 +18,18 @@ export function initSideband(callId: string, interviewId: string, attempt = 1) {
         session: {
           type: "realtime",
           instructions:
-            "You are interviewing a candidate to assess their computer science knowledge. Ask 2-3 questions based on their stated experience.",
+            `You are interviewing a candidate to assess their computer science knowledge.
+             Ask 2-3 questions based on their stated experience.
+             please use English during the interview`,
         },
       }),
     );
   });
 
   ws.on("message", function incoming(message){
-    console.log(JSON.parse(message.toString()));
+    const pasedMessage = JSON.parse(message.toString());
+    if(pasedMessage.type == "response.done"){
+        console.log(JSON.stringify(pasedMessage));
+    }
   })
 }
