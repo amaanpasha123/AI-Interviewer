@@ -47,30 +47,35 @@ app.post("/api/v1/pre-interview", async (req, res) => {
 
 //OPEN AI API is working over here in this.......
 
-app.post("/api/v1/session", async (req, res) => {
+app.post("/api/v1/session/:interviewId", async (req, res) => {
   try {
     // Step 1: Create ephemeral session + client secret
-    const secretRes = await fetch("https://api.openai.com/v1/realtime/client_secrets", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${process.env.OPENAI_KEY}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        session: {
-          type: "realtime",
-          model: "gpt-realtime",
-          audio: {
-            output: { voice: "alloy" },
-          },
+    const secretRes = await fetch(
+      "https://api.openai.com/v1/realtime/client_secrets",
+      {
+        method: "POST",
+        headers: {
+          Authorization: `Bearer ${process.env.OPENAI_KEY}`,
+          "Content-Type": "application/json",
         },
-      }),
-    });
+        body: JSON.stringify({
+          session: {
+            type: "realtime",
+            model: "gpt-realtime",
+            audio: {
+              output: { voice: "alloy" },
+            },
+          },
+        }),
+      },
+    );
 
     if (!secretRes.ok) {
       const detail = await secretRes.text();
       console.error("client_secrets error:", detail);
-      return res.status(500).json({ error: "Failed to create client secret", detail });
+      return res
+        .status(500)
+        .json({ error: "Failed to create client secret", detail });
     }
 
     const secretData = await secretRes.json();
@@ -90,11 +95,22 @@ app.post("/api/v1/session", async (req, res) => {
 
     if (!callRes.ok) {
       console.error("calls error:", answerSdp);
-      return res.status(500).json({ error: "Failed SDP exchange", detail: answerSdp });
+      return res
+        .status(500)
+        .json({ error: "Failed SDP exchange", detail: answerSdp });
     }
+
+    // Location: /v1/realtime/calls/rtc_123456
+    const location = callRes.headers.get("Location");
+    const callId = location?.split("/").pop();
+    console.log(callId);
 
     res.setHeader("Content-Type", "application/sdp");
     res.send(answerSdp);
+
+    initSideband(callId, req.params.interviewId);
+
+
   } catch (error) {
     console.error("Session error:", error);
     res.status(500).json({ error: "Failed to create session" });

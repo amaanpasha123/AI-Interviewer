@@ -52,7 +52,7 @@ export function Interview() {
         if (cancelled) return;
         await pc.setLocalDescription(offer);
 
-        const sdpResponse = await fetch(`${BACKEND_URL}/api/v1/session`, {
+        const sdpResponse = await fetch(`${BACKEND_URL}/api/v1/session/${interviewId}`, {
           method: "POST",
           body: offer.sdp,
           headers: { "Content-Type": "application/sdp" },
@@ -76,7 +76,7 @@ export function Interview() {
   }, []);
 
 
-  
+
   return (
     <div>
         Interview
