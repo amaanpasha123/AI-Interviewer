@@ -49,74 +49,42 @@ app.post("/api/v1/pre-interview", async (req, res) => {
 //OPEN AI API is working over here in this.......
 
 app.post("/api/v1/session/:interviewId", async (req, res) => {
-  try {
-    // Step 1: Create ephemeral session + client secret
-    const secretRes = await fetch(
-      "https://api.openai.com/v1/realtime/client_secrets",
-      {
+    
+    const sessionConfig = JSON.stringify({
+        type: "realtime",
+        model: "gpt-realtime",
+        audio: { output: { voice: "marin" } },
+    });
+
+    const fd = new FormData();
+    fd.set("sdp", req.body);
+    fd.set("session", sessionConfig);
+  
+    try {
+      const sdpResponse = await fetch("https://api.openai.com/v1/realtime/calls", {
         method: "POST",
         headers: {
           Authorization: `Bearer ${process.env.OPENAI_KEY}`,
-          "Content-Type": "application/json",
+          "OpenAI-Safety-Identifier": "hashed-user-id",
         },
-        body: JSON.stringify({
-          session: {
-            type: "realtime",
-            model: "gpt-realtime",
-            audio: {
-              output: { voice: "alloy" },
-            },
-          },
-        }),
-      },
-    );
+        body: fd,
+      });
 
-    if (!secretRes.ok) {
-      const detail = await secretRes.text();
-      console.error("client_secrets error:", detail);
-      return res
-        .status(500)
-        .json({ error: "Failed to create client secret", detail });
+      const location = sdpResponse.headers.get("Location");
+      const callId = location?.split("/").pop()!;
+      console.log(callId);
+      // Send back the SDP we received from the OpenAI REST API
+      const sdp = await sdpResponse.text();
+      res.send(sdp);
+
+      initSideband(callId, req.params.interviewId);
+    } catch (error) {
+      console.error("Token generation error:", error);
+      res.status(500).json({ error: "Failed to generate token" });
     }
 
-    const secretData = await secretRes.json();
-    const ephemeralKey = secretData.value; // ephemeral token
-
-    // Step 2: Exchange SDP using the ephemeral key
-    const callRes = await fetch("https://api.openai.com/v1/realtime/calls", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${ephemeralKey}`,
-        "Content-Type": "application/sdp",
-      },
-      body: req.body, // raw SDP offer
-    });
-
-    const answerSdp = await callRes.text();
-
-    if (!callRes.ok) {
-      console.error("calls error:", answerSdp);
-      return res
-        .status(500)
-        .json({ error: "Failed SDP exchange", detail: answerSdp });
-    }
-
-    // Location: /v1/realtime/calls/rtc_123456
-    const location = callRes.headers.get("Location");
-    const callId = location?.split("/").pop();
-    console.log(callId);
-
-    res.setHeader("Content-Type", "application/sdp");
-    res.send(answerSdp);
-
-    initSideband(callId!, req.params.interviewId);
-
-
-  } catch (error) {
-    console.error("Session error:", error);
-    res.status(500).json({ error: "Failed to create session" });
-  }
 });
+
 
 app.listen(3001, () => {
   console.log("server is running");
