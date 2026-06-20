@@ -33,3 +33,5 @@ export function initSideband(callId: String, interviewId: String) {
     console.log(JSON.parse(message.toString()));
   });
 }
+
+

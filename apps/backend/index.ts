@@ -5,6 +5,7 @@ import { scrapeGithub } from "./scrapers/github";
 import cors from "cors";
 import { prisma } from "./db";
 import { json } from "zod";
+import { initSideband } from "./sideband";
 
 const app = express();
 
@@ -108,7 +109,7 @@ app.post("/api/v1/session/:interviewId", async (req, res) => {
     res.setHeader("Content-Type", "application/sdp");
     res.send(answerSdp);
 
-    initSideband(callId, req.params.interviewId);
+    initSideband(callId!, req.params.interviewId);
 
 
   } catch (error) {
