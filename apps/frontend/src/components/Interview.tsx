@@ -59,7 +59,7 @@ export function Interview() {
         if (transcript) {
           console.log(transcript);
         }
-        axios.post(`${BACKEND_URL}/api/v1/session/${interviewId}`,{
+        axios.post(`${BACKEND_URL}/api/v1/session/response/${interviewId}`,{
           message:transcript
         })
       };

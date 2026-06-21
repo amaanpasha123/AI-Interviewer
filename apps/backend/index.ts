@@ -84,7 +84,7 @@ app.post("/api/v1/session/:interviewId", async (req, res) => {
     }
 });
 
-app.post("/api/v1/session/:interviewId", async(req, res)=>{
+app.post("/api/v1/session/response/:interviewId", async(req, res)=>{
     const {message} = req.body;
     await prisma.message.create({
         data : {
@@ -93,7 +93,7 @@ app.post("/api/v1/session/:interviewId", async(req, res)=>{
             message:message
         }
     });
-    
+
     res.json({message:"Message saved"});
 
 })

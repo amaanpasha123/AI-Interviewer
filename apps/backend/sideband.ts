@@ -53,7 +53,7 @@ export async function initSideband(callId: string, interviewId: string) {
                 .filter((x) => x.type === "output_audio")
                 .map((x) => x.transcript)
                 .join(" ");
-
+ 
             await prisma.message.create({
                 data: {
                     interviewId,
