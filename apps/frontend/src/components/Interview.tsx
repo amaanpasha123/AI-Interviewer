@@ -6,22 +6,33 @@ import axios from "axios";
 const client = new DeepgramClient();
 
 export function Interview() {
-  const interviewId = useParams();
+  const { interviewId } = useParams();
   const audioRef = useRef<HTMLAudioElement>(null);
 
   useEffect(() => {
     (async () => {
-      // const peer connection....
       const pc = new RTCPeerConnection();
-      //set up to play remote audio from the model
-      audioRef.current = document.createElement("audio");
-      audioRef.current.autoplay = true;
 
-      //Add the local audio track from microphone input in browser....
+      // FIXED: removed the line that overwrote audioRef.current with a
+      // detached element. We now use the actual <audio> tag rendered
+      // below via the ref.
 
       const ms = await navigator.mediaDevices.getUserMedia({
         audio: true,
       });
+
+      // FIXED: this was missing entirely. Without it, pc.createOffer()
+      // produces an SDP offer with no audio media section, which is
+      // exactly the error your backend/AI service was rejecting.
+      ms.getTracks().forEach((track) => pc.addTrack(track, ms));
+
+      // ADDED: plays back the AI's voice response once the remote
+      // track arrives.
+      pc.ontrack = (event) => {
+        if (audioRef.current) {
+          audioRef.current.srcObject = event.streams[0]!;
+        }
+      };
 
       const socket = new WebSocket(
         "wss://api.deepgram.com/v1/listen?model=nova-3&language=en",
@@ -36,45 +47,36 @@ export function Interview() {
         });
       };
 
-      socket.onmessage = (message) =>{
+      socket.onmessage = (message) => {
         const received = JSON.parse(message.data);
         const transcript = received.channel.alternatives[0].transcript;
 
-        if(transcript) {
-            console.log(transcript);
+        if (transcript) {
+          console.log(transcript);
         }
-      }
+      };
 
+      const offer = await pc.createOffer();
+      await pc.setLocalDescription(offer);
 
+      const sdpUrl = `${BACKEND_URL}/api/v1/session/${interviewId}`;
+      const sdpResponse = await fetch(sdpUrl, {
+        method: "POST",
+        body: offer.sdp,
+        headers: {
+          "Content-Type": "application/sdp",
+        },
+      });
 
-      //   // Send audio data
-      //   connection.socket.send(ms.getAudioTracks()[0].to);
+      const answerText = await sdpResponse.text();
+      console.log("SDP response status:", sdpResponse.status);
 
-      //       //start the session using the session description protocol......
+      const answer = {
+        type: "answer" as "answer",
+        sdp: answerText,
+      };
 
-      //       const offer = await pc.createOffer();
-      //       await pc.setLocalDescription(offer);
-      //       console.log("hi");
-
-      //       const sdpResponse = await fetch(
-      //         `${BACKEND_URL}/api/v1/session/${interviewId}`,
-      //         {
-      //           method: "POST",
-      //           body: offer.sdp,
-      //           headers: {
-      //             "Content-Type": "application/sdp",
-      //           },
-      //         },
-      //       );
-
-      //       console.log("hello");
-
-      //       const answer = {
-      //         type: "answer" as "answer",
-      //         sdp: await sdpResponse.text(),
-      //       };
-
-      //       await pc.setRemoteDescription(answer);
+      await pc.setRemoteDescription(answer);
     })();
   }, [interviewId]);
 
