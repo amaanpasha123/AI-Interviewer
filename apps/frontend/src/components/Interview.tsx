@@ -5,6 +5,11 @@ import { DeepgramClient } from "@deepgram/sdk";
 import axios from "axios";
 const client = new DeepgramClient();
 
+
+
+
+
+
 export function Interview() {
   const { interviewId } = useParams();
   const audioRef = useRef<HTMLAudioElement>(null);
@@ -54,6 +59,9 @@ export function Interview() {
         if (transcript) {
           console.log(transcript);
         }
+        axios.post(`${BACKEND_URL}/api/v1/session/${interviewId}`,{
+          message:transcript
+        })
       };
 
       const offer = await pc.createOffer();
