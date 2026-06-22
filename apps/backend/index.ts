@@ -98,6 +98,38 @@ app.post("/api/v1/session/response/:interviewId", async(req, res)=>{
 
 })
 
+app.get("/api/v1/result/:interviewId", async(req, res)=>{
+    const interview = await prisma.interview.findFirst({
+        where:{
+            id : req.params.interviewId
+        },
+        include:{
+            conversation:true
+        }
+    })
+
+    if(!interview) {
+        res.status(411).json({
+            message : "Interview not found"
+        })
+        return;
+    }
+
+    if(interview.status === "InProgress"){
+      // we have to call the api key of gemini api key ......
+      
+    }
+
+    res.json({
+        score : interview?.score,
+        feedback : interview?.feedback,
+        transcript : interview?.conversation.map(c=>({
+            type : c.type,
+            content : c.message,
+            createdAt : c.createdAt
+        }))
+    })
+})
 
 app.listen(3001, () => {
   console.log("server is running");

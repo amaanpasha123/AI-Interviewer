@@ -7,10 +7,12 @@ generator client {
   output   = "../src/generated/prisma"
 }
 
+
 datasource db {
   provider = "postgresql"
   // DATABASE_URL is loaded from prisma.config.ts
 }
+
 
 model Interview {
   id             String           @id @default(uuid())
@@ -18,7 +20,9 @@ model Interview {
   status         InterviewStatus
   score          Int              @default(0)
   conversation   Message[]
+  feedback       String?
 }
+
 
 model Message {
   id          String      @id @default(uuid())
