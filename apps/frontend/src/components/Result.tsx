@@ -12,6 +12,7 @@ interface Result {
   }[];
   score: number;
   feedback: string;
+  status: "Done" | "InProgress" | "Pre";
 }
 
 export function Result() {
@@ -20,6 +21,7 @@ export function Result() {
     score: 0,
     feedback: "",
     transcript: [],
+    status: "Pre",
   });
 
   useEffect(() => {
@@ -44,16 +46,20 @@ export function Result() {
 
   return (
     <div>
-      Score - {result.score}
-      Feedback - {result.feedback}
-      Transcript - 
-      {result.transcript
-        .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
-        .map((x) => (
-          <div>
-            {x.type} - {x.content}
-          </div>
-        ))}
+      {result.status == "Done" && (
+        <div>
+          Score - {result.score}
+          Feedback - {result.feedback}
+          Transcript -
+          {result.transcript
+            .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
+            .map((x) => (
+              <div>
+                {x.type} - {x.content}
+              </div>
+            ))}
+        </div>
+      )}
     </div>
   );
 }
