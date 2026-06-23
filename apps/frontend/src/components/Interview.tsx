@@ -1,16 +1,35 @@
 import { BACKEND_URL } from "@/lib/config";
 import { useEffect, useRef, useState } from "react";
-import { useParams } from "react-router";
+import { useParams, useNavigate } from "react-router";
 import axios from "axios";
 
 export function Interview() {
   const { interviewId } = useParams();
   const audioRef = useRef<HTMLAudioElement>(null);
+  const navigate = useNavigate();
   
   // State for visualizer scaling animations
   const [userVolume, setUserVolume] = useState(0);
   const [aiVolume, setAiVolume] = useState(0);
   const [currentTranscript, setCurrentTranscript] = useState("");
+
+  useEffect(() => {
+    const checkStatusInterval = setInterval(async () => {
+      try {
+        const response = await axios.get(`${BACKEND_URL}/api/v1/result/${interviewId}`);
+        
+        // If the status is marked as Done on the backend, clean up and redirect!
+        if (response.data.status === "Done") {
+          clearInterval(checkStatusInterval);
+          navigate(`/result/${interviewId}`); // 👈 Redirects user automatically
+        }
+      } catch (error) {
+        console.error("Error checking interview completion status:", error);
+      }
+    }, 4000); // Checks every 4 seconds
+
+    return () => clearInterval(checkStatusInterval);
+  }, [interviewId, navigate]);
 
   useEffect(() => {
     let audioCtx: AudioContext | null = null;
