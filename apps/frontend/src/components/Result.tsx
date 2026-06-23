@@ -36,6 +36,9 @@ export function Result() {
         .get(`${BACKEND_URL}/api/v1/result/${interviewId}`)
         .then((response) => {
           setResult(response.data);
+          if(response.data.status=="Done"){
+            clearInterval(intervalId);
+          }
         });
     }, 5 * 1000);
 
@@ -49,15 +52,17 @@ export function Result() {
       {result.status == "Done" && (
         <div>
           Score - {result.score}
+          <br />
           Feedback - {result.feedback}
+          <br />
           Transcript -
           {result.transcript
-            .sort((a, b) => a.createdAt.getTime() - b.createdAt.getTime())
             .map((x) => (
               <div>
                 {x.type} - {x.content}
               </div>
             ))}
+            <br />
         </div>
       )}
     </div>

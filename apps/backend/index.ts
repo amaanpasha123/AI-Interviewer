@@ -110,36 +110,77 @@ app.get("/api/v1/result/:interviewId", async (req, res) => {
   });
 
   if (!interview) {
-    res.status(411).json({
+    return res.status(411).json({
       message: "Interview not found",
     });
-    return;
   }
 
+  // Create mutable variables for our response
+  let finalScore = interview.score;
+  let finalFeedback = interview.feedback;
+  let finalStatus = interview.status;
+
+  // 🔒 STATE-BASED LOCKING MECHANISM
+  // If status is not "Done", it's either "Pre" or "InProgress".
+  // To prevent parallel polling requests from triggering Gemini simultaneously:
+  if (interview.status !== "Done") {
+    try {
+      // 1. Atomically attempt to update status to "Processing"
+      // This acts as a distributed lock across concurrent requests.
+      const lockedInterview = await prisma.interview.updateMany({
+        where: {
+          id: req.params.interviewId,
+          status: { not: "Done" } // Only update if someone else hasn't finished it
+        },
+        data: {
+          status: "Done" // Mark it immediately so subsequent requests skip this block
+        }
+      });
+
+      // If count is 1, this specific request won the race and gets to call Gemini
+      if (lockedInterview.count > 0) {
+        // 2. Run the heavy AI evaluation safely
+        const result = await calculateResult(interview.conversation);
+        
+        // 3. Save the actual metrics back to the row
+        await prisma.interview.update({
+          where: { id: req.params.interviewId },
+          data: {
+            feedback: result.feedback,
+            score: result.score,
+          },
+        });
+
+        finalScore = result.score;
+        finalFeedback = result.feedback;
+        finalStatus = "Done";
+      } else {
+        // If count is 0, another concurrent request is already handling it.
+        // We can just fetch the updated data or let the frontend poll again.
+        const updatedInterview = await prisma.interview.findUnique({
+          where: { id: req.params.interviewId }
+        });
+        finalScore = updatedInterview?.score!;
+        finalFeedback = updatedInterview?.feedback!;
+        finalStatus = updatedInterview?.status || "Done";
+      }
+    } catch (error) {
+      console.error("Evaluation error:", error);
+      // Fallback state if anything crashes
+    }
+  }
+
+  // Send the data back AFTER we know it's successfully evaluated or secured
   res.json({
-    score: interview?.score,
-    feedback: interview?.feedback,
-    transcript: interview?.conversation.map((c) => ({
+    score: finalScore,
+    feedback: finalFeedback,
+    status: finalStatus,
+    transcript: interview.conversation.map((c) => ({
       type: c.type,
       content: c.message,
       createdAt: c.createdAt,
     })),
   });
-
-  if (interview.status != "Done") {
-    // we have to call the api key of gemini api key ......
-    const result = await calculateResult(interview.conversation);
-    await prisma.interview.update({
-      where: {
-        id: req.params.interviewId,
-      },
-      data: {
-        status: "Done",
-        feedback: result.feedback,
-        score: result.score,
-      },
-    });
-  }
 });
 
 app.listen(3001, () => {

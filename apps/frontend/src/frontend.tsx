@@ -13,9 +13,9 @@ import "../styles/globals.css"; // <-- Import this
 
 const elem = document.getElementById("root")!;
 const app = (
-  <StrictMode>
+  // <StrictMode>
     <App />
-  </StrictMode>
+  // </StrictMode>
 );
 
 // https://bun.com/docs/bundler/hot-reloading#import-meta-hot-data
