@@ -3,8 +3,10 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { toast } from "sonner";
 import axios from "axios";
-import { BACKEND_URL } from "../lib/config";
+
 import { useNavigate } from "react-router";
+ 
+export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
 
 export function Form() {
   const [github, setGithub] = useState("");
@@ -20,7 +22,7 @@ export function Form() {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${process.env.VITE_BACKEND_URL}/api/v1/pre-interview`, {
+      const response = await axios.post(`${BACKEND_URL}/api/v1/pre-interview`, {
         github,
       });
 
