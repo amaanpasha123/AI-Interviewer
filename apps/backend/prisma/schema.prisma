@@ -42,5 +42,7 @@ enum MessageType {
 enum InterviewStatus {
   Pre
   InProgress
+  Processing
   Done
+  Failed
 }

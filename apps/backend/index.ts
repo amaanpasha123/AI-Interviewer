@@ -100,87 +100,113 @@ app.post("/api/v1/session/response/:interviewId", async (req, res) => {
 });
 
 app.get("/api/v1/result/:interviewId", async (req, res) => {
-  const interview = await prisma.interview.findFirst({
-    where: {
-      id: req.params.interviewId,
-    },
-    include: {
-      conversation: true,
-    },
-  });
+  try {
+    const interview = await prisma.interview.findFirst({
+      where: { id: req.params.interviewId },
+      include: { conversation: true },
+    });
 
-  if (!interview) {
-    return res.status(411).json({
-      message: "Interview not found",
+    if (!interview) {
+      return res.status(404).json({ message: "Interview not found" });
+    }
+
+    // Already done — return cached result immediately
+    if ((interview.status as string) === "Done") {
+      return res.json({
+        score: interview.score,
+        feedback: interview.feedback,
+        status: "Done",
+        transcript: interview.conversation.map((c) => ({
+          type: c.type,
+          content: c.message,
+          createdAt: c.createdAt,
+        })),
+      });
+    }
+
+    // Someone else is already processing — tell frontend to poll again
+    if ((interview.status as string) === "Processing") {
+      return res.status(202).json({
+        message: "Evaluation in progress, please retry shortly.",
+        status: "Processing",
+      });
+    }
+
+    // Atomically claim the work (InProgress/Pre → Processing)
+    const locked = await prisma.interview.updateMany({
+      where: {
+        id: req.params.interviewId,
+        status: { in: ["Pre", "InProgress"] as any },
+      },
+      data: { status: "Processing" as any },
+    });
+
+    // Lost the race — another request claimed it just now
+    if (locked.count === 0) {
+      return res.status(202).json({
+        message: "Evaluation in progress, please retry shortly.",
+        status: "Processing",
+      });
+    }
+
+    // We own the lock — call Gemini exactly once
+    let result;
+    try {
+      result = await calculateResult(interview.conversation);
+    } catch (geminiError: any) {
+      // Gemini failed — reset to InProgress so it can be retried later,
+      // but DON'T loop immediately. Let the frontend's next poll trigger it.
+        console.error("GEMINI ERROR:", JSON.stringify(geminiError, null, 2));
+      await prisma.interview.update({
+        where: { id: req.params.interviewId },
+        data: { status: "InProgress" as any },
+      }).catch(() => {}); // swallow secondary DB error
+
+      const isRateLimit =
+        geminiError?.status === 429 ||
+        JSON.stringify(geminiError).includes("429") ||
+        JSON.stringify(geminiError).toLowerCase().includes("quota");
+
+      if (isRateLimit) {
+        return res.status(429).json({
+          message: "Gemini quota exceeded. Please wait 1 minute before retrying.",
+          status: "InProgress",
+        });
+      }
+
+      return res.status(500).json({
+        message: "Evaluation failed. Please try again.",
+        status: "InProgress",
+      });
+    }
+
+    const updated = await prisma.interview.update({
+      where: { id: req.params.interviewId },
+      data: {
+        feedback: result.feedback,
+        score: result.score,
+        status: "Done" as any,
+      },
+    });
+
+    return res.json({
+      score: updated.score,
+      feedback: updated.feedback,
+      status: "Done",
+      transcript: interview.conversation.map((c) => ({
+        type: c.type,
+        content: c.message,
+        createdAt: c.createdAt,
+      })),
+    });
+
+  } catch (error) {
+    console.error("Unexpected error in result handler:", error);
+    return res.status(500).json({
+      message: "Internal server error.",
+      status: "InProgress",
     });
   }
-
-  // Create mutable variables for our response
-  let finalScore = interview.score;
-  let finalFeedback = interview.feedback;
-  let finalStatus = interview.status;
-
-  // 🔒 STATE-BASED LOCKING MECHANISM
-  // If status is not "Done", it's either "Pre" or "InProgress".
-  // To prevent parallel polling requests from triggering Gemini simultaneously:
-  if (interview.status !== "Done") {
-    try {
-      // 1. Atomically attempt to update status to "Processing"
-      // This acts as a distributed lock across concurrent requests.
-      const lockedInterview = await prisma.interview.updateMany({
-        where: {
-          id: req.params.interviewId,
-          status: { not: "Done" } // Only update if someone else hasn't finished it
-        },
-        data: {
-          status: "Done" // Mark it immediately so subsequent requests skip this block
-        }
-      });
-
-      // If count is 1, this specific request won the race and gets to call Gemini
-      if (lockedInterview.count > 0) {
-        // 2. Run the heavy AI evaluation safely
-        const result = await calculateResult(interview.conversation);
-        
-        // 3. Save the actual metrics back to the row
-        await prisma.interview.update({
-          where: { id: req.params.interviewId },
-          data: {
-            feedback: result.feedback,
-            score: result.score,
-          },
-        });
-
-        finalScore = result.score;
-        finalFeedback = result.feedback;
-        finalStatus = "Done";
-      } else {
-        // If count is 0, another concurrent request is already handling it.
-        // We can just fetch the updated data or let the frontend poll again.
-        const updatedInterview = await prisma.interview.findUnique({
-          where: { id: req.params.interviewId }
-        });
-        finalScore = updatedInterview?.score!;
-        finalFeedback = updatedInterview?.feedback!;
-        finalStatus = updatedInterview?.status || "Done";
-      }
-    } catch (error) {
-      console.error("Evaluation error:", error);
-      // Fallback state if anything crashes
-    }
-  }
-
-  // Send the data back AFTER we know it's successfully evaluated or secured
-  res.json({
-    score: finalScore,
-    feedback: finalFeedback,
-    status: finalStatus,
-    transcript: interview.conversation.map((c) => ({
-      type: c.type,
-      content: c.message,
-      createdAt: c.createdAt,
-    })),
-  });
 });
 
 app.listen(3001, () => {

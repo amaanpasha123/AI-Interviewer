@@ -12,7 +12,6 @@ const outputSchema = z.object({
 const RESULT_PROMPT = `
     You are an expert evaluator. Your job is to evaluate the user's interview based on the provided transcript. 
     Give them a score out of 10 and also provide constructive feedback.
-
     {{USER_TRANSCRIPT}}
 `;
 

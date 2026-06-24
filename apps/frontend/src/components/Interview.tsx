@@ -13,6 +13,11 @@ export function Interview() {
   const [aiVolume, setAiVolume] = useState(0);
   const [currentTranscript, setCurrentTranscript] = useState("");
 
+  // Tracking states for interview termination
+  const [isEnding, setIsEnding] = useState(false);
+
+  
+
   // Keep references to cleanup functions accessible outside the main useEffect loop
   const cleanupRef = useRef<(() => void) | null>(null);
 
@@ -128,13 +133,27 @@ export function Interview() {
       }
     })();
 
-    // Shared internal cleanup logic
+    // 🛡️ Shared internal cleanup logic with strict lifecycle state checks
     const baseCleanup = () => {
       cancelAnimationFrame(animationFrameId);
-      if (audioCtx) audioCtx.close();
-      if (socket) socket.close();
-      if (mediaRecorder && mediaRecorder.state !== "inactive") mediaRecorder.stop();
-      if (localStream) localStream.getTracks().forEach(track => track.stop());
+      
+      // FIX: Only close context if it is running or suspended!
+      if (audioCtx && audioCtx.state !== "closed") {
+        audioCtx.close().catch((err) => console.log("AudioContext shutdown processed safely", err));
+      }
+      
+      if (socket) {
+        socket.onmessage = null; // Unbind listeners first to prevent background state updates
+        socket.close();
+      }
+      
+      if (mediaRecorder && mediaRecorder.state !== "inactive") {
+        mediaRecorder.stop();
+      }
+      
+      if (localStream) {
+        localStream.getTracks().forEach(track => track.stop());
+      }
     };
 
     cleanupRef.current = baseCleanup;
@@ -143,13 +162,18 @@ export function Interview() {
   }, [interviewId]);
 
   // Handle manual explicit ending of the interview
- const handleEndInterview = () => {
-  if (cleanupRef.current) {
-    cleanupRef.current();
-  }
+  const handleEndInterview = () => {
+    if (cleanupRef.current) {
+      cleanupRef.current();
+    }
+    
+    setIsEnding(true);
 
-  navigate(`/result/${interviewId}`);
-};
+    // Provide a short breather for hooks to drop off cleanly before navigating
+    setTimeout(() => {
+      navigate(`/result/${interviewId}`);
+    }, 800);
+  };
 
   return (
     <div className="min-h-screen bg-white flex flex-col items-center justify-center p-6 font-sans antialiased text-slate-900">
@@ -164,72 +188,83 @@ export function Interview() {
             <p className="text-xs text-slate-400 font-mono mt-1">ID: {interviewId}</p>
           </div>
           <div className="flex items-center gap-2 px-2.5 py-1 bg-slate-50 border border-slate-200 rounded-md">
-            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
-            <span className="text-[11px] font-medium tracking-wide uppercase text-slate-600">Connected</span>
+            <span className={`w-1.5 h-1.5 rounded-full ${isEnding ? 'bg-amber-500' : 'bg-emerald-500 animate-pulse'}`} />
+            <span className="text-[11px] font-medium tracking-wide uppercase text-slate-600">
+              {isEnding ? "Saving Audio" : "Connected"}
+            </span>
           </div>
         </div>
 
-        {/* Audio Frequency Bars */}
-        <div className="w-full grid grid-cols-2 gap-4 mb-6">
-          
-          {/* User Input Frequency */}
-          <div className="flex flex-col items-center justify-center p-6 border border-slate-100 rounded-md">
-            <p className="text-[11px] font-medium text-slate-400 tracking-wider uppercase mb-4">User Input</p>
-            <div className="h-12 flex items-center justify-center gap-1.5">
-              {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  style={{ 
-                    height: `${Math.max(4, userVolume * (0.4 + i * 0.2))}px`,
-                    maxHeight: '48px'
-                  }}
-                  className="w-1 bg-slate-800 rounded-full transition-all duration-75 ease-out"
-                />
-              ))}
+        {isEnding ? (
+          <div className="w-full py-12 flex flex-col items-center justify-center text-center gap-3">
+            <div className="w-5 h-5 border-2 border-slate-800 border-t-transparent rounded-full animate-spin" />
+            <p className="text-sm text-slate-600">Closing real-time streaming engines...</p>
+          </div>
+        ) : (
+          <>
+            {/* Audio Frequency Bars */}
+            <div className="w-full grid grid-cols-2 gap-4 mb-6">
+              
+              {/* User Input Frequency */}
+              <div className="flex flex-col items-center justify-center p-6 border border-slate-100 rounded-md">
+                <p className="text-[11px] font-medium text-slate-400 tracking-wider uppercase mb-4">User Input</p>
+                <div className="h-12 flex items-center justify-center gap-1.5">
+                  {[...Array(4)].map((_, i) => (
+                    <div
+                      key={i}
+                      style={{ 
+                        height: `${Math.max(4, userVolume * (0.4 + i * 0.2))}px`,
+                        maxHeight: '48px'
+                      }}
+                      className="w-1 bg-slate-800 rounded-full transition-all duration-75 ease-out"
+                    />
+                  ))}
+                </div>
+              </div>
+
+              {/* AI Recruiter Frequency */}
+              <div className="flex flex-col items-center justify-center p-6 border border-slate-100 rounded-md">
+                <p className="text-[11px] font-medium text-slate-400 tracking-wider uppercase mb-4">AI Recruiter</p>
+                <div className="h-12 flex items-center justify-center gap-1.5">
+                  {[...Array(4)].map((_, i) => (
+                    <div
+                      key={i}
+                      style={{ 
+                        height: `${Math.max(4, aiVolume * (0.4 + i * 0.2))}px`,
+                        maxHeight: '48px'
+                      }}
+                      className="w-1 bg-slate-400 rounded-full transition-all duration-75 ease-out"
+                    />
+                  ))}
+                </div>
+              </div>
+
             </div>
-          </div>
 
-          {/* AI Recruiter Frequency */}
-          <div className="flex flex-col items-center justify-center p-6 border border-slate-100 rounded-md">
-            <p className="text-[11px] font-medium text-slate-400 tracking-wider uppercase mb-4">AI Recruiter</p>
-            <div className="h-12 flex items-center justify-center gap-1.5">
-              {[...Array(4)].map((_, i) => (
-                <div
-                  key={i}
-                  style={{ 
-                    height: `${Math.max(4, aiVolume * (0.4 + i * 0.2))}px`,
-                    maxHeight: '48px'
-                  }}
-                  className="w-1 bg-slate-400 rounded-full transition-all duration-75 ease-out"
-                />
-              ))}
+            {/* Minimal Subtitles Box */}
+            <div className="w-full min-h-[56px] border border-slate-100 bg-slate-50/50 rounded-md p-4 flex items-center justify-center text-center mb-8">
+              {currentTranscript ? (
+                <p className="text-sm text-slate-700 leading-relaxed font-light">
+                  "{currentTranscript}"
+                </p>
+              ) : (
+                <p className="text-xs text-slate-400 tracking-wide font-light italic">
+                  Awaiting speech input...
+                </p>
+              )}
             </div>
-          </div>
 
-        </div>
-
-        {/* Minimal Subtitles Box */}
-        <div className="w-full min-h-[56px] border border-slate-100 bg-slate-50/50 rounded-md p-4 flex items-center justify-center text-center mb-8">
-          {currentTranscript ? (
-            <p className="text-sm text-slate-700 leading-relaxed font-light">
-              "{currentTranscript}"
-            </p>
-          ) : (
-            <p className="text-xs text-slate-400 tracking-wide font-light italic">
-              Awaiting speech input...
-            </p>
-          )}
-        </div>
-
-        {/* Action Button Strip */}
-        <div className="w-full pt-2 flex justify-end">
-          <button 
-            onClick={handleEndInterview}
-            className="px-5 py-2 text-xs font-medium tracking-wide uppercase border border-red-200 text-red-600 bg-white hover:bg-red-50/50 active:bg-red-50 rounded-md transition-all duration-150 cursor-pointer"
-          >
-            End Interview
-          </button>
-        </div>
+            {/* Action Button Strip */}
+            <div className="w-full pt-2 flex justify-end">
+              <button 
+                onClick={handleEndInterview}
+                className="px-5 py-2 text-xs font-medium tracking-wide uppercase border border-red-200 text-red-600 bg-white hover:bg-red-50/50 active:bg-red-50 rounded-md transition-all duration-150 cursor-pointer"
+              >
+                End Interview
+              </button>
+            </div>
+          </>
+        )}
 
       </div>
 
