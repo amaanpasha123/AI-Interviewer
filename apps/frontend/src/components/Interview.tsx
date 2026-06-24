@@ -105,7 +105,7 @@ export function Interview() {
               console.log(transcript);
               setCurrentTranscript(transcript);
               
-              axios.post(`${BACKEND_URL}/api/v1/session/response/${interviewId}`, {
+              axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/session/response/${interviewId}`, {
                 message: transcript,
               }).catch((err) => console.error("API transmission failed:", err));
             }
@@ -118,7 +118,7 @@ export function Interview() {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
-        const sdpUrl = `${BACKEND_URL}/api/v1/session/${interviewId}`;
+        const sdpUrl = `${import.meta.env.VITE_BACKEND_URL}/api/v1/session/${interviewId}`;
         const sdpResponse = await fetch(sdpUrl, {
           method: "POST",
           body: offer.sdp,
