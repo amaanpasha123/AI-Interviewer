@@ -2,8 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { useParams, useNavigate } from "react-router";
 import axios from "axios";
 
-// lib/config.ts
-export const BACKEND_URL = import.meta.env.VITE_BACKEND_URL;
+
 
 export function Interview() {
   const { interviewId } = useParams();
@@ -107,7 +106,7 @@ export function Interview() {
               console.log(transcript);
               setCurrentTranscript(transcript);
               
-              axios.post(`${BACKEND_URL}/api/v1/session/response/${interviewId}`, {
+              axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/session/response/${interviewId}`, {
                 message: transcript,
               }).catch((err) => console.error("API transmission failed:", err));
             }
@@ -120,7 +119,7 @@ export function Interview() {
         const offer = await pc.createOffer();
         await pc.setLocalDescription(offer);
 
-        const sdpUrl = `${BACKEND_URL}/api/v1/session/${interviewId}`;
+        const sdpUrl = `${import.meta.env.VITE_BACKEND_URL}/api/v1/session/${interviewId}`;
         const sdpResponse = await fetch(sdpUrl, {
           method: "POST",
           body: offer.sdp,
