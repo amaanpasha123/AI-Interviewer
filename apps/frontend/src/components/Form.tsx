@@ -20,7 +20,7 @@ export function Form() {
     setLoading(true);
 
     try {
-      const response = await axios.post(`${import.meta.env.VITE_BACKEND_URL}/api/v1/pre-interview`, {
+      const response = await axios.post(`${process.env.VITE_BACKEND_URL}/api/v1/pre-interview`, {
         github,
       });
 
