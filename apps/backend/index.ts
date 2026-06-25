@@ -13,7 +13,13 @@ const app = express();
 
 app.use(express.json());
 app.use(cors({
-  origin: ["https://ai-interviewer-lg04.onrender.com", "http://localhost:3000"],
+  origin: (origin, callback) => {
+    if (!origin || origin.endsWith(".vercel.app")) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
