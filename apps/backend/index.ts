@@ -12,7 +12,11 @@ import { Result } from "pg";
 const app = express();
 
 app.use(express.json());
-app.use(cors());
+app.use(cors({
+  origin: ["https://ai-interviewer-lg04.onrender.com", "http://localhost:3000"],
+  methods: ["GET", "POST", "OPTIONS"],
+  allowedHeaders: ["Content-Type", "Authorization"],
+}));
 // Parse raw SDP payloads posted from the browser
 app.use(express.text({ type: ["application/sdp", "text/plain"] }));
 
