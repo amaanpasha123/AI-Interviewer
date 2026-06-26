@@ -70,7 +70,7 @@ app.post("/api/v1/session/:interviewId", async (req, res) => {
   const fd = new FormData();
   fd.set("sdp", req.body);
   fd.set("session", sessionConfig);
-
+  
   try {
     const sdpResponse = await fetch(
       "https://api.openai.com/v1/realtime/calls",
