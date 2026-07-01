@@ -52,7 +52,6 @@ app.post("/api/v1/pre-interview", async (req, res) => {
       status: "Pre",
     },
   });
-
   res.json({ id: interview.id });
 });
 
@@ -106,8 +105,6 @@ app.post("/api/v1/session/response/:interviewId", async (req, res) => {
   });
   res.json({ message: "Message saved" });
 });
-
-
 
 app.get("/api/v1/result/:interviewId", async (req, res) => {
   try {
