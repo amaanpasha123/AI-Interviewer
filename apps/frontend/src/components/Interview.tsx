@@ -22,7 +22,7 @@ export function Interview() {
   // Keep references to cleanup functions accessible outside the main useEffect loop
   const cleanupRef = useRef<(() => void) | null>(null);
 
-  useEffect(() => {
+ useEffect(() => {
     let audioCtx: AudioContext | null = null;
     let userSource: MediaStreamAudioSourceNode | null = null;
     let aiSource: MediaStreamAudioSourceNode | null = null;
@@ -32,7 +32,7 @@ export function Interview() {
     let socket: WebSocket | null = null;
     let mediaRecorder: MediaRecorder | null = null;
     let localStream: MediaStream | null = null;
-
+ 
     (async () => {
       try {
         const pc = new RTCPeerConnection();

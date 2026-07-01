@@ -1,10 +1,8 @@
 import express from "express";
 import { preInterviewBody } from "./types";
-import axios from "axios";
 import { scrapeGithub } from "./scrapers/github";
 import cors from "cors";
 import { prisma } from "./db";
-import { json } from "zod";
 import { initSideband } from "./sideband";
 import { calculateResult } from "./result";
 import { Result } from "pg";
