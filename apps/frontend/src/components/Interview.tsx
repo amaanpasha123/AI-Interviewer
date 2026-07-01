@@ -120,6 +120,7 @@ export function Interview() {
         await pc.setLocalDescription(offer);
 
         const sdpUrl = `${import.meta.env.VITE_BACKEND_URL}/api/v1/session/${interviewId}`;
+        
         const sdpResponse = await fetch(sdpUrl, {
           method: "POST",
           body: offer.sdp,

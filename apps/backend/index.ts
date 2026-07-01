@@ -21,6 +21,7 @@ app.use(cors({
   methods: ["GET", "POST", "OPTIONS"],
   allowedHeaders: ["Content-Type", "Authorization"],
 }));
+
 // Parse raw SDP payloads posted from the browser
 app.use(express.text({ type: ["application/sdp", "text/plain"] }));
 
